@@ -70,7 +70,14 @@ samples_per_us = sample_rate/1e6;
 wait_rn16 = ones(1,700*samples_per_us);
 to_usrp = [];
 for i =1:1:4
-    to_usrp = [to_usrp,send,wait_rn16,ones(1,(i-1)*20*30*samples_per_us)];
+    to_usrp = [to_usrp,send,wait_rn16,]
+end
+
+
+%% repeat
+times = 1;
+for i = 1:1:times
+    to_usrp = [to_usrp, send];
 end
 % power-up
 % to_usrp = [ones(1,10000),to_usrp];
