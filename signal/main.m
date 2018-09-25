@@ -68,9 +68,13 @@ end
 sample_rate = 2e6;
 samples_per_us = sample_rate/1e6;
 wait_rn16 = ones(1,700*samples_per_us);
+antenna_switch_time = 30; 
 to_usrp = [];
 for i =1:1:4
-    to_usrp = [to_usrp,send,wait_rn16,ones(1,(i-1)*20*30*samples_per_us)];
+    to_usrp = [to_usrp,...
+                send,...
+                ones(1,(64*antenna_switch_time)*samples_per_us-length(send)),...
+                ones(1,(i-1)*20*30*samples_per_us)];
 end
 % power-up
 % to_usrp = [ones(1,10000),to_usrp];
