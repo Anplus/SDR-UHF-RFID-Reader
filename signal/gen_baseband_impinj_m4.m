@@ -1,17 +1,17 @@
-function output = gen_baseband_impinj_m2(input, preamble)
+function output = gen_baseband_impinj_m4(input, preamble)
 %% GEN - 2 PHY
 %% PHY in us
 sample_rate = 2e6;
 samples_per_us = sample_rate/1e6;
 
 delim_len = 12*samples_per_us;
-% BLF = DR/TRcal = 64/3/(378/6*1e-6);
-RTcal_len = 378/6*samples_per_us;
-TRcal_len = 510/6*samples_per_us;
+% BLF = DR/TRcal = 64/3/(85*1e-6) = 250e3;
+RTcal_len = 63*samples_per_us;
+TRcal_len = 85*samples_per_us;
 
-Tari_len = 108/6*samples_per_us;
-PW_len = 54/6*samples_per_us;
-Data1_len = 174/6*samples_per_us;
+Tari_len = 25*samples_per_us;
+PW_len = 9*samples_per_us;
+Data1_len = 36*samples_per_us;
 
 %% Wait time
 % T1 = max(10*Tpri,RTcal)=250us
