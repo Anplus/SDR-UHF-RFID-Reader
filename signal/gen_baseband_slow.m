@@ -3,11 +3,15 @@ function output = gen_baseband_slow(input, preamble)
 %% PHY in us
 sample_rate = 2e6;
 samples_per_us = sample_rate/1e6;
-delim_len = 12*samples_per_us;
-TRcal_len = 200*samples_per_us;
-RTcal_len =72*samples_per_us;
-Tari_len = 24*samples_per_us;
+delim_len = 12.5*samples_per_us;
+% Tari =25us
+Tari_len = 25*samples_per_us;
 PW_len = 12*samples_per_us;
+Data0_len = Tari_len;
+Data1_len = 2*Tari_len;
+RTcal_len = Data0_len+Data1_len;
+% BLF = 40Khz, Tpri = 25us, DR = 8, TRcal = DR/BLF = 8/40e3 = 200us
+TRcal_len = 200*samples_per_us;
 
 %% Wait time
 % T1 = max(10*Tpri,RTcal)=250us
@@ -18,19 +22,19 @@ cw_waitRN16_send = ones(1,(250+500+18*25)*samples_per_us);
 cw_wait_send = ones(1,300*samples_per_us);
 
 %% basic time structure
-data_1_send = [ones(1,Tari_len*1.5),zeros(1,PW_len)];
-data_0_send = [ones(1,Tari_len-PW_len),zeros(1,PW_len)];
-RTcal_send = [ones(1,RTcal_len-PW_len),zeros(1,PW_len)];
-TRcal_send = [ones(1,TRcal_len-PW_len),zeros(1,PW_len)];
+data_1_send = [ones(1,Data1_len-PW_len),0.1*ones(1,PW_len)];
+data_0_send = [ones(1,Data0_len-PW_len),0.1*ones(1,PW_len)];
+RTcal_send = [ones(1,RTcal_len-PW_len),0.1*ones(1,PW_len)];
+TRcal_send = [ones(1,TRcal_len-PW_len),0.1*ones(1,PW_len)];
 
 %% preamble
-preamble_send = [zeros(1,delim_len),...
+preamble_send = [0.1*ones(1,delim_len),...
                 data_0_send,...
                 RTcal_send,...
                 TRcal_send];
             
 %% fram-sync
-fram_send = [zeros(1,delim_len),...
+fram_send = [0.1*ones(1,delim_len),...
              data_0_send,...
              RTcal_send];
          
