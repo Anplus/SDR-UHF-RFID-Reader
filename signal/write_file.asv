@@ -1,9 +1,0 @@
-function [] = write_file(input,filename)
-%%
-re = input;
-im = zeros(1,length())
-file = fopen(filename,'wb'); 
-fwrite(file,input,'uchar');
-%%
-fclose(file);
-end

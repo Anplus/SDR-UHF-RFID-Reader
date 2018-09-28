@@ -1,8 +1,8 @@
 clc;clear;close all;
 
 %% load file
-setting_file = fopen('./rfid-setting-impinj-m4.json');
-% setting_file = fopen('./rfid-setting-slow.json');
+% setting_file = fopen('./rfid-setting-impinj-m4.json');
+setting_file = fopen('./rfid-setting-slow.json');
 setting = fscanf(setting_file,'%s');
 config = jsondecode(setting);
 
@@ -57,8 +57,8 @@ for i=1:1:length(RFID_SETTING)
             query_target,...
             query_current_q'];
     query = rfid_crc5(query);
-%     send = [send,gen_baseband_slow(query,1)];
-    send = [send,gen_baseband_impinj_m4(query,1)];
+    send = [send,gen_baseband_slow(query,1)];
+%     send = [send,gen_baseband_impinj_m4(query,1)];
 end
 %%
 % query 673us
@@ -68,8 +68,7 @@ samples_per_us = sample_rate/1e6;
 wait_rn16 = ones(1,700*samples_per_us);
 antenna_switch_time = 30; 
 to_usrp = [];
-to_usrp = [to_usrp,...
-            send,...
+to_usrp = [send,...
             ones(1,(64*antenna_switch_time)*samples_per_us-length(send)),...
             ones(1,10*antenna_switch_time*samples_per_us)];
 
@@ -79,7 +78,7 @@ to_usrp = [to_usrp,...
 figure;
 plot(to_usrp);
 axis([1 length(to_usrp) -0.1 1.1]);
-filename = '../send-m4.dat';
+filename = '../send-slow.dat';
 write_file(to_usrp,filename);
 
 %% 
