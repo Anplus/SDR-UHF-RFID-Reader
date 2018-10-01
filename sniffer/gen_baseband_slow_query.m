@@ -1,4 +1,4 @@
-function output = gen_baseband_slow_preamble
+function output = gen_baseband_slow_query
 %% GEN - 2 PHY
 %% PHY in us
 sample_rate = 6e6;
