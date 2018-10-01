@@ -1,5 +1,6 @@
 clc;clear;close all;
-path = '../../data/signal-source-cw-move/continue/left-right/';
+addpath('../../data/signal-source-cw-move/continue/left-right-2/');
+path = '../../data/signal-source-cw-move/continue/left-right-2/';
 file_path =  path;  
 img_path_list = dir(strcat(file_path, '*.bin')); 
 img_num = length(img_path_list);   
@@ -14,4 +15,6 @@ if img_num > 0
     end
 end
 figure;
-plot(phase_array(60,:));
+plot(phase_array(36,:));
+figure;
+plot(phase_array(36,:)-phase_array(60,:))
