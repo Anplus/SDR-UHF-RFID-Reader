@@ -24,10 +24,10 @@ for i = 1:length(tag_preamble_code)
     elseif (tag_preamble_code(i) == 2)
         % violation
         if (flag == 0)
-            signal_tag_preamble = [signal_tag_preamble,zeros(1,(Tpri)*(samples_per_us))];
+            signal_tag_preamble = [signal_tag_preamble,zeros(1,(Tpri*)*(samples_per_us))];
             flag = 0;
         else
-            signal_tag_preamble = [signal_tag_preamble,ones(1,(Tpri)*(samples_per_us))];
+            signal_tag_preamble = [signal_tag_preamble,ones(1,Tpri*(samples_per_us))];
             flag = 1;
         end
     end
