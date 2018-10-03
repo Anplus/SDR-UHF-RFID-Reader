@@ -1,6 +1,7 @@
-clc;clear;close all;
+function phase_array = rn16_array(filename)
 %% file
-fid = fopen('../../data/move/20180929205105_2ch.bin','rb');
+% fid = fopen('../../data/move/20180929205105_2ch.bin','rb');
+fid = fopen(filename);
 [B2,Count] = fread(fid,[4,6000000],'double');
 fclose(fid);
 
@@ -8,8 +9,8 @@ fclose(fid);
 array = B2(1,:)+1i*B2(2,:);
 single = B2(3,:)+1i*B2(4,:); 
 single_abs = abs(single);
-figure;
-plot(abs(single));
+% figure;
+% plot(abs(single));
 % hold on;
 % plot(abs(array(1:2e4)));
 
@@ -33,7 +34,7 @@ start = lagDiff+length(query_send);
 
 %% phase extraction 
 num = floor(length(array)/time_round) - 1;
-phase = zeros(64,floor(num/64));
+phase_array = zeros(64,floor(num/64));
 round_start = start;
 antenna_offset = 30;
 antenna_stable_time = 15;
@@ -125,7 +126,7 @@ for i = 1:1:num-1
         phase_temp = angle((mean(imag(array(data1_index)))-mean(imag(array(data0_index))))+1i*...
                 mean(real(array(data1_index)))-mean(real(array(data0_index))));
 
-        phase(antenna_index_inround,phase_num(antenna_index_inround)+1) = phase_temp;
+        phase_array(antenna_index_inround,phase_num(antenna_index_inround)+1) = phase_temp;
         phase_num(antenna_index_inround) = phase_num(antenna_index_inround)+1;
     
     end
@@ -134,8 +135,9 @@ for i = 1:1:num-1
 %     plot(abs(single(antenna_start+antenna_stable_time:antenna_start+time_antenna-antenna_stable_time)));
 end
 %%
-figure;
-plot(phase(19,:));
+% figure;
+% plot(phase_array(19,:));
+end
 
 
 

@@ -1,4 +1,4 @@
-clc;clear;close all;
+function phase_array = cw_array(filename)
 %% file
 fid = fopen('../../data/move/20180929205105_2ch.bin','rb');
 [B2,Count] = fread(fid,[4,6000000],'double');
@@ -102,30 +102,31 @@ for i = 1:1:num-1
 %     plot(rn16_start:rn16_end-1,code);
     %% antenna
     for n = 1:1:antenna_num_inround
-            antenna_index = floor(rn16_start/time_antenna);
-    antenna_index_inround = 0;
-    if(mod(antenna_index,64)==0)
-        antenna_index_inround = 64;
-    else
-        antenna_index_inround = mod(antenna_index,64);
-    end
-    antenna_start = antenna_index*time_antenna+antenna_offset;
-    antenna_stable_start = antenna_start+antenna_stable_time;
-    antenna_stable_end = antenna_start+time_antenna-antenna_stable_time;
-    antenna_data = array(antenna_stable_start:antenna_stable_end);
-    % data 1 index
-    check_length = time_antenna-2*antenna_stable_time;
-    data1_index = rn16_start+find(find(code == 1)+rn16_start < antenna_stable_end &...
-        find(code == 1)+rn16_start>antenna_stable_start);
-    data0_index = setdiff([antenna_stable_start:antenna_stable_end],data1_index);
-    if(isempty(data1_index) || isempty(data0_index))
-        continue;
-    end
-    phase_temp = angle((mean(imag(array(data1_index)))-mean(imag(array(data0_index))))+1i*...
-            mean(real(array(data1_index)))-mean(real(array(data0_index))));
-    
-    phase(antenna_index_inround,phase_num(antenna_index_inround)+1) = phase_temp;
-    phase_num(antenna_index_inround) = phase_num(antenna_index_inround)+1;
+        antenna_start = rn16_start+(n-1)*time_antenna;
+        antenna_index = floor(antenna_start/time_antenna);
+        antenna_index_inround = 0;
+        if(mod(antenna_index,64)==0)
+            antenna_index_inround = 64;
+        else
+            antenna_index_inround = mod(antenna_index,64);
+        end
+        antenna_start = antenna_index*time_antenna+antenna_offset;
+        antenna_stable_start = antenna_start+antenna_stable_time;
+        antenna_stable_end = antenna_start+time_antenna-antenna_stable_time;
+        antenna_data = array(antenna_stable_start:antenna_stable_end);
+        % data 1 index
+        check_length = time_antenna-2*antenna_stable_time;
+        data1_index = rn16_start+find(find(code == 1)+rn16_start < antenna_stable_end &...
+            find(code == 1)+rn16_start>antenna_stable_start);
+        data0_index = setdiff([antenna_stable_start:antenna_stable_end],data1_index);
+        if(isempty(data1_index) || isempty(data0_index))
+            continue;
+        end
+        phase_temp = angle((mean(imag(array(data1_index)))-mean(imag(array(data0_index))))+1i*...
+                mean(real(array(data1_index)))-mean(real(array(data0_index))));
+
+        phase(antenna_index_inround,phase_num(antenna_index_inround)+1) = phase_temp;
+        phase_num(antenna_index_inround) = phase_num(antenna_index_inround)+1;
     
     end
 
@@ -134,7 +135,7 @@ for i = 1:1:num-1
 end
 %%
 figure;
-plot(phase(16,:));
+plot(phase(19,:));
 
 
 
