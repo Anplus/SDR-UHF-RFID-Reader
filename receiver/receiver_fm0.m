@@ -38,39 +38,42 @@ signal_i = fi(imag(signal),1,16,12);
 % signal_abs = abs(signal)-mean(abs(signal));
 % signal_abs = signal_abs./max(signal_abs);
 
-dc = dsp.DCBlocker('Algorithm','CIC','NormalizedBandwidth', 0.01);
+dc = dsp.DCBlocker('Algorithm','CIC','NormalizedBandwidth', 0.03);
 
 %fvtool(dc)
 signal_dcrrm = dc(signal_r);
 signal_dcirm = dc(signal_i);
+signalr_dcrm_p = signal_r-mean(signal_r);
+signali_dcrm_p = signal_i-mean(signal_i);
 figure;
+subplot(2,1,1)
 plot(signal_dcrrm);
 hold on;
-plot(signal_r-mean(signal_r));
-figure;
+plot(signalr_dcrm_p);
+subplot(2,1,2)
 plot(signal_dcirm);
 hold on;
-plot(signal_i-mean(signal_i));
+plot(signali_dcrm_p);
 
 figure;
 scatter(signal_dcrrm,signal_dcirm);
 hold on;
 scatter(signal_r,signal_i);
 legend('dc-rm','o');
+title('DC remove')
 
 %% carrier sync
 carrierSync = comm.CarrierSynchronizer( ...
     'SamplesPerSymbol',samples_per_symbol, ...
+    'NormalizedLoopBandwidth',0.01, ...
     'Modulation','BPSK');
 
-bb = signal_dcrrm+1i*signal_dcirm;
+bb = signalr_dcrm_p+1i*signali_dcrm_p;
 bb = double(real(bb))+1i*double(imag(bb));
 syncSignal = carrierSync(bb);
 
-figure;
-scatter(real(syncSignal),imag(syncSignal))
+scatterplot(syncSignal,2);
 title('carrier sync')
-
 %% symbol sync
 symbolSync = comm.SymbolSynchronizer(...
     'SamplesPerSymbol',samples_per_symbol, ...
@@ -79,9 +82,22 @@ symbolSync = comm.SymbolSynchronizer(...
     'TimingErrorDetector','Gardner (non-data-aided)');
 
 rxSync = symbolSync(syncSignal);
-figure;
-scatter(real(rxSync),imag(rxSync))
+scatterplot(rxSync,2);
 title('symbol sync')
+
+%% bpsk decode
+rxData = pskdemod(rxSync,2);      % Demodulate
+rxData = ~rxData;
+
+rxData_show = repmat(rxData,1,samples_per_symbol-1);
+rxData_show2 =reshape(rxData_show',1,[]);
+
+figure;
+plot(rxData_show2)
+hold on;
+oo = abs(signal)-mean(abs(signal));
+plot(oo./max(oo));
+
 
 %% preamble detection
 p = [1,1,0,1,0,0,1,0,0,0,1,1]';
@@ -93,15 +109,7 @@ detmetSort = sort(detmet,'descend');
 detmetSort(1:5)
 prbdet.Threshold = 1;
 idx = prbdet(rxSync)
-%% bpsk decode
-bpskDemodulator = comm.BPSKDemodulator;
-rxData = bpskDemodulator(rxSync)       % Demodulate
 
-rxData_show = repmat(rxData,1,samples_per_symbol);
-rxData_show2 =reshape(rxData_show',1,[]);
-
-figure;
-plot(rxData_show2)
 
 
 
