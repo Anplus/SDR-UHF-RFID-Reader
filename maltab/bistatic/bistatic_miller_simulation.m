@@ -1,6 +1,6 @@
 clc;clear;close all;
 %% signal extraction
-addpath('../data');
+addpath('../../data');
 fd = fopen('receiver-m4-160k-2MS.iq');
 data = fread(fd,'float32');
 signal = data(3:4:end)+1i*data(4:4:end);
@@ -8,7 +8,7 @@ figure;
 plot(abs(signal))
 
 %% signal to be decode
-len = 2200;
+len = 2100;
 start = 1306;
 signal = signal(start:start+len);
 
@@ -40,26 +40,30 @@ signalr_dcrm_p = signal_r-mean(signal_r);
 signali_dcrm_p = signal_i-mean(signal_i);
 bb_dcrm = bb-mean(bb);
 scatterplot(bb_dcrm,2)
+title('dc remove')
 %% carrier sync
 bb_dcrm = bb_dcrm(2:end)-bb_dcrm(1:end-1);
+scatterplot(bb_dcrm,2)
+title('diff constellation');
 % coarse
-freqComp = comm.CoarseFrequencyCompensator( ...
-    'SamplesPerSymbol',samples_per_symbol, ...
-    'Modulation','BPSK', ...
-    'SampleRate',sample_rate, ...
-    'FrequencyResolution',1);
-[compensatedData,estFreqOffset] = freqComp(bb_dcrm);
-freqCompInfo = info(freqComp)
-specAnal = dsp.SpectrumAnalyzer('SampleRate',sample_rate,'ShowLegend',true, ...
-    'ChannelNames',{'Offset Signal','Compensated Signal'});
-specAnal([bb_dcrm compensatedData])
+% freqComp = comm.CoarseFrequencyCompensator( ...
+%     'SamplesPerSymbol',samples_per_symbol, ...
+%     'Modulation','BPSK', ...
+%     'SampleRate',sample_rate, ...
+%     'FrequencyResolution',1);
+% [compensatedData,estFreqOffset] = freqComp(bb_dcrm);
+% freqCompInfo = info(freqComp)
+% specAnal = dsp.SpectrumAnalyzer('SampleRate',sample_rate,'ShowLegend',true, ...
+%     'ChannelNames',{'Offset Signal','Compensated Signal'});
+% specAnal([bb_dcrm compensatedData])
 carrierSync = comm.CarrierSynchronizer( ...
     'SamplesPerSymbol',samples_per_symbol, ...
     'NormalizedLoopBandwidth',0.01, ...
     'Modulation','BPSK');
 
-syncSignal = carrierSync(compensatedData);
-
+syncSignal = carrierSync(bb_dcrm);
+scatterplot(syncSignal,2)
+title('carrier sync')
 %% symbol sync
 symbolSync = comm.SymbolSynchronizer(...
     'SamplesPerSymbol',samples_per_symbol, ...
@@ -83,42 +87,36 @@ plot(rxData_show2)
 hold on;
 oo = abs(signal)-mean(abs(signal));
 plot(oo./max(oo));
-%%
-rxData = pskdemod(rxSync(idx+1:end),2);      % Demodula
-rxData = ~rxData;
-
-rxData_show = repmat([zeros(idx,1);rxData],1,samples_per_symbol);
-rxData_show2 =reshape(rxData_show',1,[]);
-
-figure;
-plot(rxData_show2,'LineWidth',2)
-hold on;
-oo = abs(bb)-mean(abs(bb));
-plot(oo./max(oo));
+title('direct demode')
 
 %% preamble detection
 pilot = repmat([1,0],1,M*16);
-p_o = [0,1,0,1,1,1,1];
-len = length(p_o);
-p = [repmat([1,0],1,M),repmat([1,0],1,M/2),~repmat([1,0],1,M/2),...
-    ~repmat([1,0],1,M),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)...
-    repmat([1,0],1,M),~repmat([1,0],1,M/2),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)];
+p = [pilot,...
+    repmat([1,0],1,M),repmat([1,0],1,M/2),~repmat([1,0],1,M/2),... % 0,1
+    ~repmat([1,0],1,M),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)... % 0,1
+    repmat([1,0],1,M/2),~repmat([1,0],1,M/2),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)]; % 1,1
 prb = pskmod(p',2);
 prbdet = comm.PreambleDetector(prb);
 prbdet.Threshold = 0.03;
 [idx,detmet] = prbdet(rxSync);
-idx = idx(1);
-%% bpsk decode
-rxData = pskdemod(rxSync(idx+1:end),2);      % Demodula
-rxData = ~rxData;
+if size(idx) == 0
+    disp('no tag')
+else
+    disp('detected')
+    idx = idx(1);
+    %% bpsk decode
+    rxData = pskdemod(rxSync(idx+1:end),2);      % Demodula
+    
+    rxData_show = repmat([zeros(idx,1);rxData],1,samples_per_symbol);
+    rxData_show2 =reshape(rxData_show',1,[]);
 
-rxData_show = repmat([zeros(idx,1);rxData],1,samples_per_symbol);
-rxData_show2 =reshape(rxData_show',1,[]);
+    figure;
+    plot(rxData_show2,'LineWidth',2)
+    hold on;
+    oo = abs(bb)-mean(abs(bb));
+    plot(oo./max(oo));
+    title('preamble detection and demode')
+end
 
-figure;
-plot(rxData_show2,'LineWidth',2)
-hold on;
-oo = abs(bb)-mean(abs(bb));
-plot(oo./max(oo));
 
 

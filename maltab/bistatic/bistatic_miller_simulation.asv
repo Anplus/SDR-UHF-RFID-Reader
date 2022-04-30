@@ -40,6 +40,7 @@ signalr_dcrm_p = signal_r-mean(signal_r);
 signali_dcrm_p = signal_i-mean(signal_i);
 bb_dcrm = bb-mean(bb);
 scatterplot(bb_dcrm,2)
+title('dc remove')
 %% carrier sync
 bb_dcrm = bb_dcrm(2:end)-bb_dcrm(1:end-1);
 % coarse
@@ -59,7 +60,8 @@ carrierSync = comm.CarrierSynchronizer( ...
     'Modulation','BPSK');
 
 syncSignal = carrierSync(compensatedData);
-
+scatterplot(syncSignal,2)
+title('carrier sync')
 %% symbol sync
 symbolSync = comm.SymbolSynchronizer(...
     'SamplesPerSymbol',samples_per_symbol, ...
@@ -83,15 +85,17 @@ plot(rxData_show2)
 hold on;
 oo = abs(signal)-mean(abs(signal));
 plot(oo./max(oo));
+title('direct demode')
 
 
 %% preamble detection
 pilot = repmat([1,0],1,M*16);
 p_o = [0,1,0,1,1,1,1];
 len = length(p_o);
-p = [repmat([1,0],1,M),repmat([1,0],1,M/2),~repmat([1,0],1,M/2),...
-    ~repmat([1,0],1,M),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)...
-    repmat([1,0],1,M),~repmat([1,0],1,M/2),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)];
+p = [pilot,repmat([1,0],1,M),...
+    repmat([1,0],1,M/2),~repmat([1,0],1,M/2),... % 0,1
+    ~repmat([1,0],1,M),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)... % 0,1
+    repmat([1,0],1,M/2),~repmat([1,0],1,M/2),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)]; % 1,1
 prb = pskmod(p',2);
 prbdet = comm.PreambleDetector(prb);
 prbdet.Threshold = 0.03;
@@ -109,5 +113,5 @@ plot(rxData_show2,'LineWidth',2)
 hold on;
 oo = abs(bb)-mean(abs(bb));
 plot(oo./max(oo));
-
+title('preamble detection and demode')
 

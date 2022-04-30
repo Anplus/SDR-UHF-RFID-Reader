@@ -1,15 +1,15 @@
 clc;clear;close all;
 %% signal extraction
 addpath('../../data');
-fd = fopen('received-fm0-40.dat');
+fd = fopen('received-m4.iq');
 data = fread(fd,'float32');
 signal = data(1:2:end)+1i*data(2:2:end);
 figure;
 plot(abs(signal))
 
 %% signal to be decode
-len = 1e4;
-start = 60180+1.7e4*12-600;
+len = 0.86e4;
+start = 11548+1.823e4*2;
 signal = signal(start:start+len);
 figure;
 plot(abs(signal))
@@ -23,8 +23,9 @@ plot(abs(signal));
 hold on;
 plot(abs(bb))
 
-% FM0
-blf = 40e3;
+%% PHY setting: M4
+blf = 160e3;
+M = 4;
 sample_rate = 2e6;
 samples_per_symbol  = floor(1/blf*sample_rate/2);
 
@@ -63,47 +64,45 @@ symbolSync = comm.SymbolSynchronizer(...
 rxSync = symbolSync(syncSignal);
 scatterplot(rxSync,2);
 title('symbol sync')
-
 %% preamble detection
-p = [1,1,0,1,0,0,1,0,0,0,1,1]';
-prb = pskmod(p,2);
-prbdet = comm.PreambleDetector(prb);
-prbdet.Threshold = 0.1;
-[idx,detmet] = prbdet(rxSync);
-idx = idx(1);
-%% bpsk decode
+% bit
+pilot = repmat([1,0],1,M*16);
+p = [pilot,...
+    repmat([1,0],1,M),repmat([1,0],1,M/2),~repmat([1,0],1,M/2),... % 0,1
+    ~repmat([1,0],1,M),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)... % 0,1
+    repmat([1,0],1,M/2),~repmat([1,0],1,M/2),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)]'; % 1,1
+prbdet = comm.PreambleDetector(p,'Input','Bit');
 rxData = pskdemod(rxSync(idx+1:end),2);      % Demodula
-rxData = ~rxData;
+rxData = ~rxData;   
+idx = prbdet(rxData);
+% symbol
+% pilot = repmat([1,0],1,M*16);
+% p = [pilot,...
+%     repmat([1,0],1,M),repmat([1,0],1,M/2),~repmat([1,0],1,M/2),... % 0,1
+%     ~repmat([1,0],1,M),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)... % 0,1
+%     repmat([1,0],1,M/2),~repmat([1,0],1,M/2),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)]'; % 1,1
+% prb = pskmod(p,2);
+% prbdet = comm.PreambleDetector(prb);
+% prbdet.Threshold = 0.17;
+% [idx,detmet] = prbdet(rxSync);
+if isempty(idx) == 1
+    disp('no tag')
+else
+    disp('detected')
+    idx = idx(1);
+    %% bpsk decode
+    rxData = pskdemod(rxSync(idx+1:end),2);      % Demodula
+    rxData = ~rxData;
 
-rxData_show = repmat([zeros(idx,1);rxData],1,samples_per_symbol);
-rxData_show2 =reshape(rxData_show',1,[]);
+    rxData_show = repmat([zeros(idx,1);rxData],1,samples_per_symbol);
+    rxData_show2 =reshape(rxData_show',1,[]);
 
-figure;
-plot(rxData_show2,'LineWidth',2)
-hold on;
-oo = abs(signal)-mean(abs(signal));
-plot(oo./max(oo));
-
-%% bit to symbol
-sym = rxData(2:2:256)-rxData(1:2:255);
-sym = ~sym;
-
-%% CRC check
-% CRC-CCITT International Standard, ITU Recommendation X.25
-% The PacketCRC is computed and sent by a Tag during backscatter, protects the transmitted  PC/XPC  and  EPC, 
-crc_ouput = rfid_crc16(sym(1:16+96)');
-crc_ouput = crc_ouput(end-15:end)
-expectedChecksum = sym(128-15:128)' % Expected FCS
-checksumLength = 16;
-
-crcGen = comm.CRCGenerator(...
-    'Polynomial','X^16 + X^12 + X^5 + 1',...
-    'InitialConditions',1,...
-    'DirectMethod',true,...
-    'FinalXOR',1);
-crcSeq = crcGen(sym(1:16+96));
-checkSum =  crcSeq(end-checksumLength+1:end)'
-isequal(expectedChecksum,checkSum)
+    figure;
+    plot(rxData_show2,'LineWidth',2)
+    hold on;
+    oo = abs(signal)-mean(abs(signal));
+    plot(oo./max(oo));
+end
 
 
 

@@ -1,0 +1,142 @@
+clc;clear;close all;
+%% signal extraction
+addpath('../../data');
+fd = fopen('received-m4.iq');
+data = fread(fd,'float32');
+signal = data(1:2:end)+1i*data(2:2:end);
+figure;
+plot(abs(signal))
+
+%% signal to be decode
+len = 0.86e4;
+start = 11548+1.823e4*3;
+signal = signal(start:start+len);
+figure;
+plot(abs(signal))
+
+% signal to fi
+signal_r = real(signal);
+signal_i = imag(signal);
+bb = signal_r+1i*signal_i;
+figure;
+plot(abs(signal));
+hold on;
+plot(abs(bb))
+
+%% PHY setting: M4
+blf = 160e3;
+M = 4;
+sample_rate = 8e6;
+samples_per_symbol  = floor(1/blf*sample_rate/2);
+
+%% steps
+% 1. dc remove, 2. carrier sync 3. symbol sync 4. bpsk demodulate
+%% dc block
+% signal_abs = abs(signal)-mean(abs(signal));
+% signal_abs = signal_abs./max(signal_abs);
+
+%fvtool(dc)
+signalr_dcrm_p = signal_r-mean(signal_r);
+signali_dcrm_p = signal_i-mean(signal_i);
+bb_dcrm = bb-mean(bb);
+figure;
+plot(abs(bb_dcrm));
+hold on;
+plot(abs(bb));
+scatterplot(bb_dcrm,2);
+
+fd = fd_low;
+bb_dcrm = filter(fd,bb_dcrm);
+
+%% carrier sync
+carrierSync = comm.CarrierSynchronizer( ...
+    'SamplesPerSymbol',samples_per_symbol, ...
+    'NormalizedLoopBandwidth',0.02, ...
+    'Modulation','BPSK');
+syncSignal = carrierSync(bb_dcrm);
+scatterplot(syncSignal,2);
+title('carrier sync')
+figure;
+plot(real(syncSignal)./max(real(syncSignal)));
+hold on;
+plot(real(bb_dcrm)./max(real(bb_dcrm)));
+
+%% symbol sync
+symbolSync = comm.SymbolSynchronizer(...
+    'SamplesPerSymbol',samples_per_symbol, ...
+    'NormalizedLoopBandwidth',0.005, ...
+    'DampingFactor',1, ...
+    'TimingErrorDetector','Gardner (non-data-aided)');
+
+rxSync = symbolSync(syncSignal);
+scatterplot(rxSync,2);
+title('symbol sync')
+
+rxData_show = repmat([rxSync],1,samples_per_symbol);
+rxData_show2 =reshape(rxData_show',1,[]);
+figure;
+plot(real(rxData_show2)./max(real(rxData_show2)),'LineWidth',2)
+hold on;
+plot(real(bb_dcrm)./max(real(bb_dcrm)));
+
+%% preamble detection
+% bit
+pilot = repmat([1,0],1,M*16);
+p = [pilot,...
+    repmat([1,0],1,M),repmat([1,0],1,M/2),~repmat([1,0],1,M/2),... % 0,1
+    ~repmat([1,0],1,M),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)... % 0,1
+    repmat([1,0],1,M/2),~repmat([1,0],1,M/2),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)]'; % 1,1
+
+prbdet = comm.PreambleDetector(p,'Input','Bit');
+rxData = pskdemod(rxSync,2);      % Demodula
+rxData = ~rxData;   
+[idx] = prbdet(rxData);
+figure;
+pre = rxData(19:19+175);
+plot(pre);
+hold on;
+plot(p);
+
+rxData_show = repmat([rxData],1,samples_per_symbol);
+rxData_show2 =reshape(rxData_show',1,[]);
+
+figure;
+plot(rxData_show2,'LineWidth',2)
+hold on;
+plot(real(syncSignal)./max(real(syncSignal)));
+
+% symbol preamble detection
+% pilot = repmat([1,0],1,M*16);
+% p = [pilot,...
+%     repmat([1,0],1,M),repmat([1,0],1,M/2),~repmat([1,0],1,M/2),... % 0,1
+%     ~repmat([1,0],1,M),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)... % 0,1
+%     repmat([1,0],1,M/2),~repmat([1,0],1,M/2),~repmat([1,0],1,M/2),repmat([1,0],1,M/2)]'; % 1,1
+% prb = pskmod(p,2);
+% prbdet = comm.PreambleDetector(prb);
+% prbdet.Threshold = 0.17;
+% [idx,detmet] = prbdet(rxSync);
+% if isempty(idx) == 1
+%     disp('no tag')
+% else
+%     disp('detected')
+%     idx = idx(1);
+%     %% bpsk decode
+%     rxData = pskdemod(rxSync(idx+1:end),2);      % Demodula
+%     rxData = ~rxData;
+% 
+%     rxData_show = repmat([zeros(idx,1);rxData],1,samples_per_symbol);
+%     rxData_show2 =reshape(rxData_show',1,[]);
+% 
+%     figure;
+%     plot(rxData_show2,'LineWidth',2)
+%     hold on;
+%     oo = abs(signal)-mean(abs(signal));
+%     plot(oo./max(oo));
+% end
+
+
+
+
+
+
+
