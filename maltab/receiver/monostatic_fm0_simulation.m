@@ -1,6 +1,6 @@
 clc;clear;close all;
 %% signal extraction
-addpath('../data');
+addpath('../../data');
 fd = fopen('received-fm0-40.dat');
 data = fread(fd,'float32');
 signal = data(1:2:end)+1i*data(2:2:end);
@@ -15,8 +15,8 @@ figure;
 plot(abs(signal))
 
 % signal to fi
-signal_r = fi(real(signal),1,16,16);
-signal_i = fi(imag(signal),1,16,16);
+signal_r = real(signal);
+signal_i = imag(signal);
 bb = signal_r+1i*signal_i;
 figure;
 plot(abs(signal));
@@ -31,18 +31,18 @@ samples_per_symbol  = floor(1/blf*sample_rate/2);
 %% steps
 % 1. dc remove, 2. carrier sync 3. symbol sync 4. bpsk demodulate
 %% dc block
-dc = dsp.DCBlocker('Algorithm','CIC','NormalizedBandwidth', 0.03);
-% fvtool(dc)
-signal_dcrrm = dc(signal_r);
-signal_dcirm = dc(signal_i);
-bb_dcrm = signal_dcrrm+1i*signal_dcirm;
+% signal_abs = abs(signal)-mean(abs(signal));
+% signal_abs = signal_abs./max(signal_abs);
+
+%fvtool(dc)
+signalr_dcrm_p = signal_r-mean(signal_r);
+signali_dcrm_p = signal_i-mean(signal_i);
+bb_dcrm = bb-mean(bb);
 figure;
 plot(abs(bb_dcrm));
 hold on;
 plot(abs(bb));
-figure;
-scatter(real(bb_dcrm),imag(bb_dcrm));
-
+scatterplot(bb_dcrm,2)
 %% carrier sync
 carrierSync = comm.CarrierSynchronizer( ...
     'SamplesPerSymbol',samples_per_symbol, ...

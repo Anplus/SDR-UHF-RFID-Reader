@@ -1,6 +1,6 @@
 clc;clear;close all;
 %% signal extraction
-addpath('../data');
+addpath('../../data');
 fd = fopen('receiver-m4-160k-2MS.iq');
 data = fread(fd,'float32');
 signal = data(3:4:end)+1i*data(4:4:end);

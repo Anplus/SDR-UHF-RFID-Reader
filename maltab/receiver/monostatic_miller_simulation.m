@@ -1,6 +1,6 @@
 clc;clear;close all;
 %% signal extraction
-addpath('../data');
+addpath('../../data');
 fd = fopen('received-fm0-40.dat');
 data = fread(fd,'float32');
 signal = data(1:2:end)+1i*data(2:2:end);
