@@ -25,6 +25,8 @@ M = 4;
 signal_r = fi(real(signal),1,16,12);
 signal_i = fi(imag(signal),1,16,12);
 
+%% steps
+% 1. dc remove, 2. carrier sync 3. symbol sync 4. bpsk demodulate
 %% dc block
 % signal_abs = abs(signal)-mean(abs(signal));
 % signal_abs = signal_abs./max(signal_abs);
@@ -32,61 +34,79 @@ signal_i = fi(imag(signal),1,16,12);
 dc = dsp.DCBlocker('Algorithm','CIC','NormalizedBandwidth', 0.03);
 
 %fvtool(dc)
-signal_dcrrm = dc(signal_r);
-signal_dcirm = dc(signal_i);
+signalr_dcrm = dc(signal_r);
+signali_dcrm = dc(signal_i);
+signalr_dcrm_p = signal_r-mean(signal_r);
+signali_dcrm_p = signal_i-mean(signal_i);
 figure;
-plot(signal_dcrrm);
+subplot(2,1,1)
+plot(signalr_dcrm);
 hold on;
-plot(signal_r-mean(signal_r));
-figure;
-plot(signal_dcirm);
+plot(signalr_dcrm_p);
+subplot(2,1,2)
+plot(signali_dcrm);
 hold on;
-plot(signal_i-mean(signal_i));
+plot(signali_dcrm_p);
+title('DC remove')
 
 figure;
-scatter(signal_dcrrm,signal_dcirm);
+scatter(signalr_dcrm,signali_dcrm);
 hold on;
-scatter(signal_r,signal_i);
-legend('dc-rm','o');
-
+scatter(signalr_dcrm_p,signali_dcrm_p);
+legend('dc-rm','dc-rm-perfect');
+title('DC remove')
+%% sync
+normLoopBWCarrier = 0.005;      % Normalized loop bandwidth for carrier synchronizer
+normLoopBWSymbol = 0.005;       % Normalized loop bandwidth for symbol synchronizer
 %% carrier sync
 carrierSync = comm.CarrierSynchronizer( ...
     'SamplesPerSymbol',samples_per_symbol, ...
+    'NormalizedLoopBandwidth',normLoopBWCarrier, ...
     'Modulation','BPSK');
 
-bb = signal_dcrrm+1i*signal_dcirm;
-bb = double(real(bb))+1i*double(imag(bb));
+bb = signalr_dcrm_p+1i*signali_dcrm_p;
+figure;
+plot(abs(bb));
+hold on;
+plot(abs(signal))
 syncSignal = carrierSync(bb);
 
-figure;
-scatter(real(syncSignal),imag(syncSignal))
+scatterplot(syncSignal,2);
 title('carrier sync')
-
 %% symbol sync
 symbolSync = comm.SymbolSynchronizer(...
     'SamplesPerSymbol',samples_per_symbol, ...
-    'NormalizedLoopBandwidth',0.01, ...
+    'NormalizedLoopBandwidth',normLoopBWSymbol, ...
+    'DampingFactor',1.0, ...
     'TimingErrorDetector','Gardner (non-data-aided)');
 
 rxSync = symbolSync(syncSignal);
-figure;
-scatter(real(rxSync),imag(rxSync))
+scatterplot(rxSync,2);
 title('symbol sync')
-%% bpsk demodulate
-bpskDemodulator = comm.BPSKDemodulator;
-rxData = bpskDemodulator(rxSync);       % Demodulate
+
+%% bpsk decode
+rxData = pskdemod(rxSync,2);      % Demodulate
+rxData = ~rxData;
 
 rxData_show = repmat(rxData,1,samples_per_symbol);
 rxData_show2 =reshape(rxData_show',1,[]);
+
 figure;
-plot(rxData_show2);
+plot(rxData_show2)
 hold on;
-plot(real(bb)./max(real(bb)));
-legend('decode','signal');
+oo = abs(bb)-mean(abs(bb));
+plot(oo./max(oo));
+
 
 %% preamble detection
-preamble = [1,1,0,1,0,0,1,0,0,0,1,1]';
-prbdet = comm.PreambleDetector(preamble,'Input','Bit','Detections','First');
-idx = prbdet(rxData)
+p = [1,1,0,1,0,0,1,0,0,0,1,1]';
+preamble = pskmod(p,2);
+prbdet = comm.PreambleDetector(preamble);
+[idx,detmet] = prbdet(rxSync);
+numel(idx)
+detmetSort = sort(detmet,'descend');
+detmetSort(1:5)
+prbdet.Threshold = 1;
+idx = prbdet(rxSync)
 
 
