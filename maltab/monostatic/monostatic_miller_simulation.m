@@ -9,7 +9,7 @@ plot(abs(signal))
 
 %% signal to be decode
 len = 0.86e4;
-start = 11548+1.823e4*3;
+start = 11548+1.823e4*2;
 signal = signal(start:start+len);
 figure;
 plot(abs(signal))
@@ -45,13 +45,12 @@ hold on;
 plot(abs(bb));
 scatterplot(bb_dcrm,2);
 
-fd = fd_low;
-bb_dcrm = filter(fd,bb_dcrm);
-
+%% differeniate
+% bb_dcrm = bb_dcrm(2:end)-bb_dcrm(1:end-1);
 %% carrier sync
 carrierSync = comm.CarrierSynchronizer( ...
     'SamplesPerSymbol',samples_per_symbol, ...
-    'NormalizedLoopBandwidth',0.02, ...
+    'NormalizedLoopBandwidth',0.01, ...
     'Modulation','BPSK');
 syncSignal = carrierSync(bb_dcrm);
 scatterplot(syncSignal,2);
@@ -60,15 +59,31 @@ figure;
 plot(real(syncSignal)./max(real(syncSignal)));
 hold on;
 plot(real(bb_dcrm)./max(real(bb_dcrm)));
+title('carrier sync')
+
+%% matched filter
+% fd = fd_low;
+% bb_dcrm = filter(fd,bb_dcrm);
+fd = 1/samples_per_symbol*ones(1,floor(samples_per_symbol));
+% fvtool(fd);
+filteredSignal = filter(fd,1,syncSignal);
+scatterplot(filteredSignal,2);
+title('matched filter')
+figure;
+plot(real(filteredSignal));
+hold on;
+plot(real(bb_dcrm));
+legend('matched filter','recevied');
+% filteredSignal = bb_dcrm;
 
 %% symbol sync
 symbolSync = comm.SymbolSynchronizer(...
     'SamplesPerSymbol',samples_per_symbol, ...
-    'NormalizedLoopBandwidth',0.005, ...
+    'NormalizedLoopBandwidth',0.01, ...
     'DampingFactor',1, ...
     'TimingErrorDetector','Gardner (non-data-aided)');
 
-rxSync = symbolSync(syncSignal);
+rxSync = symbolSync(filteredSignal);
 scatterplot(rxSync,2);
 title('symbol sync')
 
@@ -77,8 +92,8 @@ rxData_show2 =reshape(rxData_show',1,[]);
 figure;
 plot(real(rxData_show2)./max(real(rxData_show2)),'LineWidth',2)
 hold on;
-plot(real(bb_dcrm)./max(real(bb_dcrm)));
-
+plot(real(filteredSignal)./max(real(filteredSignal)));
+title('symbol sync')
 %% preamble detection
 % bit
 pilot = repmat([1,0],1,M*16);
@@ -103,7 +118,7 @@ rxData_show2 =reshape(rxData_show',1,[]);
 figure;
 plot(rxData_show2,'LineWidth',2)
 hold on;
-plot(real(syncSignal)./max(real(syncSignal)));
+plot(real(bb_dcrm)./max(real(bb_dcrm)));
 
 % symbol preamble detection
 % pilot = repmat([1,0],1,M*16);

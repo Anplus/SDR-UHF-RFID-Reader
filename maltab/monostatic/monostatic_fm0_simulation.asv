@@ -9,7 +9,7 @@ plot(abs(signal))
 
 %% signal to be decode
 len = 1e4;
-start = 60180+1.7e4*1;
+start = 60180+1.7e4*12-600;
 signal = signal(start:start+len);
 figure;
 plot(abs(signal))
@@ -42,21 +42,16 @@ plot(abs(bb));
 scatterplot(bb_dcrm,2)
 title('dc rm')
 
-% %% differeniate
-% bb_dcrm = bb_dcrm(2:end)-bb_dcrm(1:end-1);
-
 %% matched filter
-fd = 1/samples_per_symbol*ones(1,samples_per_symbol);
-% fvtool(fd);
-filteredSignal = filter(fd,1,bb_dcrm);
+fd = 
+filteredSignal = filter(,1,bb_dcrm);
 scatterplot(filteredSignal,2);
 title('matched filter')
 figure;
 plot(real(filteredSignal));
 hold on;
 plot(real(bb_dcrm));
-legend('matched filter','recevied');
-% filteredSignal = bb_dcrm;
+legend('matched filter','receied');
 
 %% carrier sync
 carrierSync = comm.CarrierSynchronizer( ...
@@ -73,26 +68,22 @@ title('carrier sync')
 symbolSync = comm.SymbolSynchronizer(...
     'SamplesPerSymbol',samples_per_symbol, ...
     'NormalizedLoopBandwidth',0.01, ...
-    'DampingFactor',1, ...
+    'DampingFactor',1.0, ...
     'TimingErrorDetector','Gardner (non-data-aided)');
 
 rxSync = symbolSync(syncSignal);
 scatterplot(rxSync,2);
 title('symbol sync')
-figure;
-plot(angle(rxSync))
 
 %% preamble detection
 p = [1,1,0,1,0,0,1,0,0,0,1,1]';
 prb = pskmod(p,2);
 prbdet = comm.PreambleDetector(prb);
-prbdet.Threshold = 1/length(p);
+prbdet.Threshold = 0.1;
 [idx,detmet] = prbdet(rxSync);
-max(detmet)
 idx = idx(1);
-
 %% bpsk decode
-rxData = pskdemod(rxSync(idx+1:end),2);      % Demodulate
+rxData = pskdemod(rxSync(idx+1:end),2);      % Demodula
 rxData = ~rxData;
 
 rxData_show = repmat([zeros(idx,1);rxData],1,samples_per_symbol);
